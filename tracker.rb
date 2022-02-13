@@ -15,7 +15,6 @@ class Tracker
 
   # [{pr1_number => ["link_to_file2_path"]}, {pr2_number => ["link_to_file3_path", "link_to_file4_path"]}]
   def self.get_pull_requests_with_duplicates
-    #TODO recursively read pages
     pull_requests = get_json("#{PULL_REQUESTS_BASE_URL}?per_page=100")
 
     prs_commits_files = {}
