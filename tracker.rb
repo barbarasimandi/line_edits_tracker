@@ -6,22 +6,28 @@ require 'byebug'
 class Tracker
 
   BEARER_TOKEN = File.read('.bearer').chomp
+  BASE_URL = "https://api.github.com/repos/rails/rails/pulls"
 
   def self.get_pull_requests
     #TODO recursively read pages
-    pull_requests = get_json("https://api.github.com/repos/rails/rails/pulls?per_page=15")
+    pull_requests = get_json("#{BASE_URL}?per_page=15")
 
     prs_with_multiple_commits = {}
 
-    pull_requests.inject([]) do |prs, pull_request|
+    pull_requests.map do |pull_request|
       url = pull_request[:url]
+
       pr = get_json(url)
       pr_number = pr[:number]
 
-      prs << pr if pr[:commits] > 1
-
-      prs_with_multiple_commits[pr_number] = prs
+      prs_with_multiple_commits[pr_number] = collect_commits(pr_number) if pr[:commits] > 1
+      prs_with_multiple_commits
     end
+  end
+
+  def self.collect_commits(pr_number)
+    commits = get_json("#{BASE_URL}/#{pr_number}/commits")
+    commits.map { |commit| commit[:sha] }
   end
 
   private
