@@ -3,11 +3,14 @@ require 'json'
 
 class Tracker
   def self.get_pull_requests
-    pull_requests = get_json("https://api.github.com/repos/rails/rails/pulls?per_page=5")
+    #TODO recursively read pages
+    pull_requests = get_json("https://api.github.com/repos/rails/rails/pulls?per_page=15")
 
     pull_requests.inject([]) do |prs, pull_request|
       url = pull_request.fetch("url")
-      prs << get_json(url)
+      pr = get_json(url)
+      number_of_commits = pr.fetch("commits")
+      prs << pr if number_of_commits > 1
     end
   end
 
