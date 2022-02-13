@@ -1,16 +1,15 @@
 require 'net/http'
 require 'json'
 
-require 'byebug'
-
 class Tracker
 
   BEARER_TOKEN = File.read('.bearer').chomp
   PULL_REQUESTS_BASE_URL = "https://api.github.com/repos/rails/rails/pulls"
 
+  # [{pr1_number => ["link_to_file2_path"]}, {pr2_number => ["link_to_file3_path", "link_to_file4_path"]}]
   def self.get_pull_requests
     #TODO recursively read pages
-    pull_requests = get_json("#{PULL_REQUESTS_BASE_URL}?per_page=50")
+    pull_requests = get_json("#{PULL_REQUESTS_BASE_URL}?per_page=15")
 
     prs_commits_files = {}
     pull_requests.map do |pull_request|
@@ -22,6 +21,8 @@ class Tracker
     prs_commits_files
   end
 
+  # pr1_number
+  # ["link_to_file2_path"]
   def self.collect_commits_files(pr_number)
     prs_commits_files = { pr_number => []}
     commits = get_json("#{PULL_REQUESTS_BASE_URL}/#{pr_number}/commits")
@@ -34,6 +35,8 @@ class Tracker
     check_duplicates(prs_commits_files)
   end
 
+  # {pr1_number => [["file1_path", "file2_path"], ["file2_path"]]}
+  # ["link_to_file2_path"]
   def self.check_duplicates(prs_commits_files)
     duplicates = []
     prs_commits_files.each do |_pr_number, commit_url_files|
