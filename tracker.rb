@@ -6,24 +6,31 @@ class Tracker
   BEARER_TOKEN = File.read('.bearer').chomp
   PULL_REQUESTS_BASE_URL = "https://api.github.com/repos/rails/rails/pulls"
 
+  def self.print
+    data = get_pull_requests_with_duplicates
+    data.each_pair do |pr_number, file_links|
+      p "In https://github.com/rails/rails/pull/#{pr_number} the following files have been modified in multiple commits: #{file_links.join(', ')}"
+    end
+  end
+
   # [{pr1_number => ["link_to_file2_path"]}, {pr2_number => ["link_to_file3_path", "link_to_file4_path"]}]
-  def self.get_pull_requests
+  def self.get_pull_requests_with_duplicates
     #TODO recursively read pages
-    pull_requests = get_json("#{PULL_REQUESTS_BASE_URL}?per_page=15")
+    pull_requests = get_json("#{PULL_REQUESTS_BASE_URL}?per_page=100")
 
     prs_commits_files = {}
     pull_requests.map do |pull_request|
       pr = get_json(pull_request[:url])
       pr_number = pr[:number]
-      prs_commits_files[pr_number] = collect_commits_files(pr_number) if pr[:commits] > 1
+      prs_commits_files[pr_number] = collect_files(pr_number) if pr[:commits] > 1
     end
 
-    prs_commits_files
+    prs_commits_files.reject!{|_pr_number, file_links| file_links.empty?}
   end
 
   # pr1_number
   # ["link_to_file2_path"]
-  def self.collect_commits_files(pr_number)
+  def self.collect_files(pr_number)
     prs_commits_files = { pr_number => []}
     commits = get_json("#{PULL_REQUESTS_BASE_URL}/#{pr_number}/commits")
     commit_urls = commits.map { |commit| commit[:url] }
