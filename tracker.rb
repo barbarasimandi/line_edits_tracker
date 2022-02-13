@@ -11,23 +11,27 @@ class Tracker
   def self.get_pull_requests
     #TODO recursively read pages
     pull_requests = get_json("#{BASE_URL}?per_page=15")
-
-    prs_with_multiple_commits = {}
-
     pull_requests.map do |pull_request|
       url = pull_request[:url]
 
       pr = get_json(url)
       pr_number = pr[:number]
 
-      prs_with_multiple_commits[pr_number] = collect_commits(pr_number) if pr[:commits] > 1
-      prs_with_multiple_commits
+      collect_commits_files(pr_number) if pr[:commits] > 1
     end
   end
 
-  def self.collect_commits(pr_number)
+  def self.collect_commits_files(pr_number)
+    prs_commits_files = { pr_number => []}
     commits = get_json("#{BASE_URL}/#{pr_number}/commits")
-    commits.map { |commit| commit[:sha] }
+    commit_urls = commits.map { |commit| commit[:url] }
+
+    commit_urls.each do |commit_url|
+      # TODO get filenames from [sha:"abc", filename: "name", ...]
+      prs_commits_files[pr_number] << get_json(commit_url)[:files]
+    end
+
+    prs_commits_files
   end
 
   private
