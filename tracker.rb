@@ -2,27 +2,23 @@ require 'net/http'
 require 'json'
 
 class Tracker
-  def self.get_response
-    url = URI("https://api.github.com/repos/rails/rails/pulls?per_page=5")
+  def self.get_pull_requests
+    pull_requests = get_json("https://api.github.com/repos/rails/rails/pulls?per_page=5")
 
-    https = Net::HTTP.new(url.host, url.port)
-    https.use_ssl = true
-
-    request = Net::HTTP::Get.new(url)
-
-    response = https.request(request)
-
-    pull_requests = JSON.parse(response.read_body)
-
-    prs = []
-
-    pull_requests.each do |pull_request|
+    pull_requests.inject([]) do |prs, pull_request|
       url = pull_request.fetch("url")
-      request = Net::HTTP::Get.new(url)
-
-      response = https.request(request)
-
-      prs << JSON.parse(response.read_body)
+      prs << get_json(url)
     end
+  end
+
+  private
+
+  def self.get_json(url)
+    uri = URI(url)
+    https = Net::HTTP.new(uri.host, uri.port)
+    https.use_ssl = true
+    request = Net::HTTP::Get.new(uri)
+    response = https.request(request)
+    JSON.parse(response.read_body)
   end
 end
