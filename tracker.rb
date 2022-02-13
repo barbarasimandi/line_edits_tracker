@@ -12,16 +12,14 @@ class Tracker
     #TODO recursively read pages
     pull_requests = get_json("#{PULL_REQUESTS_BASE_URL}?per_page=50")
 
-    prs_commits_files = pull_requests.map do |pull_request|
-      url = pull_request[:url]
-
-      pr = get_json(url)
+    prs_commits_files = {}
+    pull_requests.map do |pull_request|
+      pr = get_json(pull_request[:url])
       pr_number = pr[:number]
-
-      collect_commits_files(pr_number) if pr[:commits] > 1
+      prs_commits_files[pr_number] = collect_commits_files(pr_number) if pr[:commits] > 1
     end
 
-    prs_commits_files.compact
+    prs_commits_files
   end
 
   def self.collect_commits_files(pr_number)
@@ -39,10 +37,11 @@ class Tracker
   def self.check_duplicates(prs_commits_files)
     duplicates = []
     prs_commits_files.each do |_pr_number, commit_url_files|
-      intersection = commit_url_files.inject(&:&)
-      duplicates << intersection if intersection.any?
+      intersection = commit_url_files.inject { |acc, file| acc & file }
+      duplicates += intersection if intersection.any?
     end
-    duplicates
+
+    duplicates.map{ |file| "https://github.com/rails/rails/blob/main/#{file}" }
   end
 
   private
