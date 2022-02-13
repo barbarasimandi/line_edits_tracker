@@ -6,12 +6,13 @@ require 'byebug'
 class Tracker
 
   BEARER_TOKEN = File.read('.bearer').chomp
-  BASE_URL = "https://api.github.com/repos/rails/rails/pulls"
+  PULL_REQUESTS_BASE_URL = "https://api.github.com/repos/rails/rails/pulls"
 
   def self.get_pull_requests
     #TODO recursively read pages
-    pull_requests = get_json("#{BASE_URL}?per_page=15")
-    pull_requests.map do |pull_request|
+    pull_requests = get_json("#{PULL_REQUESTS_BASE_URL}?per_page=50")
+
+    prs_commits_files = pull_requests.map do |pull_request|
       url = pull_request[:url]
 
       pr = get_json(url)
@@ -19,19 +20,29 @@ class Tracker
 
       collect_commits_files(pr_number) if pr[:commits] > 1
     end
+
+    prs_commits_files.compact
   end
 
   def self.collect_commits_files(pr_number)
     prs_commits_files = { pr_number => []}
-    commits = get_json("#{BASE_URL}/#{pr_number}/commits")
+    commits = get_json("#{PULL_REQUESTS_BASE_URL}/#{pr_number}/commits")
     commit_urls = commits.map { |commit| commit[:url] }
 
     commit_urls.each do |commit_url|
-      # TODO get filenames from [sha:"abc", filename: "name", ...]
-      prs_commits_files[pr_number] << get_json(commit_url)[:files]
+      prs_commits_files[pr_number] << get_json(commit_url)[:files].map{|f| f[:filename]}
     end
 
-    prs_commits_files
+    check_duplicates(prs_commits_files)
+  end
+
+  def self.check_duplicates(prs_commits_files)
+    duplicates = []
+    prs_commits_files.each do |_pr_number, commit_url_files|
+      intersection = commit_url_files.inject(&:&)
+      duplicates << intersection if intersection.any?
+    end
+    duplicates
   end
 
   private
